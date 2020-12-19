@@ -112,18 +112,20 @@ public enum BlockstackConstants {
                                     transitPrivateKey: transitKey,
                                     completion: completion)
         }
-        
-        if #available(iOS 12.0, *) {
-            let authSession = ASWebAuthenticationSession(url: url, callbackURLScheme: redirectURI.absoluteString, completionHandler: completion)
-            if #available(iOS 13.0, *) {
-                 authSession.presentationContextProvider = self
+
+        DispatchQueue.main.async {
+            if #available(iOS 12.0, *) {
+                let authSession = ASWebAuthenticationSession(url: url, callbackURLScheme: redirectURI.absoluteString, completionHandler: completion)
+                if #available(iOS 13.0, *) {
+                     authSession.presentationContextProvider = self
+                }
+                authSession.start()
+                self.asWebAuthSession = authSession
+            } else {
+                // Fallback on earlier versions
+                self.sfAuthSession = SFAuthenticationSession(url: url, callbackURLScheme: redirectURI.absoluteString, completionHandler: completion)
+                self.sfAuthSession?.start()
             }
-            authSession.start()
-            self.asWebAuthSession = authSession
-        } else {
-            // Fallback on earlier versions
-            self.sfAuthSession = SFAuthenticationSession(url: url, callbackURLScheme: redirectURI.absoluteString, completionHandler: completion)
-            self.sfAuthSession?.start()
         }
     }
     
