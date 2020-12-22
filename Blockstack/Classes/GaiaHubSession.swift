@@ -43,18 +43,10 @@ class GaiaHubSession {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue("bearer \(token)", forHTTPHeaderField: "Authorization")
-        if let jsonData = page?.data(using: .utf8),
-            let body = try? JSONSerialization.jsonObject(with: jsonData, options: .allowFragments),
-            let pageRequest = body as? [String: Any] {
-            request.httpBody = jsonData
-            if let pageLength = pageRequest["length"] as? String {
-                request.addValue(pageLength, forHTTPHeaderField: "Content-Length")
-            }
-        } else {
-            let pageRequest: [String: Any] = ["page": NSNull()]
-            let body = try? JSONSerialization.data(withJSONObject: pageRequest, options: [])
-            request.httpBody = body
-        }
+
+        let pageRequest: [String: Any] = ["page": page ?? NSNull()]
+        let body = try? JSONSerialization.data(withJSONObject: pageRequest, options: [])
+        request.httpBody = body
 
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             guard error == nil,
@@ -76,8 +68,9 @@ class GaiaHubSession {
                     return
                 }
             }
-            
-            if !entries.isEmpty, let nextPage = result["page"] as? String {
+
+            let nextPage = result["page"] as? String
+            if nextPage != nil {
                 self.listFilesLoop(page: nextPage, callCount: callCount + 1, fileCount: fileCount, callback: callback, completion: completion)
             } else {
                 completion(fileCount, nil)
