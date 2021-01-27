@@ -41,6 +41,7 @@ class Auth {
                             appBundleID: String,
                             scopes: [AuthScope],
                             expiresAt: Date,
+                            sendToSignIn: Bool,
                             extraParams: [String: Any]?) -> String {
         var request: String
         
@@ -60,7 +61,8 @@ class Auth {
             "version": BlockstackConstants.AuthProtocolVersion,
             "do_not_include_profile": true,
             "supports_hub_url": true,
-            "scopes": scopes.compactMap { $0.rawValue }
+            "scopes": scopes.compactMap { $0.rawValue },
+            "sendToSignIn": sendToSignIn
         ]
         
         extraParams?.forEach { (key, value) in payload[key] = value }

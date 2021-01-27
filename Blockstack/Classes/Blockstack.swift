@@ -67,6 +67,7 @@ public enum BlockstackConstants {
                        appDomain: URL,
                        manifestURI: URL? = nil,
                        scopes: [AuthScope] = [.storeWrite],
+                       sendToSignIn: Bool,
                        completion: @escaping (AuthResult) -> ()) {
         print("signing in")
         
@@ -85,6 +86,7 @@ public enum BlockstackConstants {
             appDomain: appDomain,
             appBundleID: appBundleID,
             scopes: scopes,
+            sendToSignIn: sendToSignIn,
             extraParams: ["client": "ios"])
         
         var urlCompsWithQueryItems = URLComponents(string: BlockstackConstants.BrowserWebAppAuthEndpoint)!
@@ -158,6 +160,7 @@ public enum BlockstackConstants {
                     appBundleID: String,
                     scopes: [AuthScope],
                     expiresAt: Date = Date().addingTimeInterval(TimeInterval(60.0 * 60.0)),
+                    sendToSignIn: Bool,
                     extraParams: [String: Any]?) -> String? {
         return Auth.makeRequest(transitPrivateKey: transitPrivateKey,
                                 redirectURI: redirectURI,
@@ -166,6 +169,7 @@ public enum BlockstackConstants {
                                 appBundleID: appBundleID,
                                 scopes: scopes,
                                 expiresAt: expiresAt,
+                                sendToSignIn: sendToSignIn,
                                 extraParams: extraParams)
     }
     
