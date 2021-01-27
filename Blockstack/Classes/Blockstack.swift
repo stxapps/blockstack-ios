@@ -36,8 +36,7 @@ public enum BlockstackConstants {
 /**
  A class that contains the native swift implementations of Blockstack.js methods and Blockstack network operations.
  */
-@objc open class Blockstack: NSObject {
-//@objc open class Blockstack: NSObject, ASWebAuthenticationPresentationContextProviding {
+@objc open class Blockstack: NSObject, ASWebAuthenticationPresentationContextProviding {
 
     /**
      A shared instance of Blockstack that exists for the lifetime of your app. Use this instance instead of creating your own.
