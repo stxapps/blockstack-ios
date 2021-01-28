@@ -23,7 +23,8 @@ public enum BlockstackConstants {
     }
 
     public static let DefaultCoreAPIURL = "https://core.blockstack.org"
-    public static let BrowserWebAppAuthEndpoint = "\(BrowserWebAppURL)/#/sign-in"
+    public static let BrowserWebAppSignUpEndpoint = "\(BrowserWebAppURL)/#/sign-up"
+    public static let BrowserWebAppSignInEndpoint = "\(BrowserWebAppURL)/#/sign-in"
     public static let BrowserWebClearAuthEndpoint = "\(BrowserWebAppURL)/clear-auth"
     public static let NameLookupEndpoint = "https://core.blockstack.org/v1/names/"
     public static let AuthProtocolVersion = "1.1.0"
@@ -87,11 +88,12 @@ public enum BlockstackConstants {
             scopes: scopes,
             sendToSignIn: sendToSignIn,
             extraParams: ["client": "ios"])
-        
-        var urlCompsWithQueryItems = URLComponents(string: BlockstackConstants.BrowserWebAppAuthEndpoint)!
+
+        let browserWebAppAuthEndpoint = sendToSignIn ? BlockstackConstants.BrowserWebAppSignInEndpoint : BlockstackConstants.BrowserWebAppSignUpEndpoint
+        var urlCompsWithQueryItems = URLComponents(string: browserWebAppAuthEndpoint)!
         urlCompsWithQueryItems.queryItems = [URLQueryItem(name: "authRequest", value: authRequest)]
         // workaround wrong query item and # fragment positions in URL
-        let urlString = BlockstackConstants.BrowserWebAppAuthEndpoint + "?" + urlCompsWithQueryItems.query!
+        let urlString = browserWebAppAuthEndpoint + "?" + urlCompsWithQueryItems.query!
         let url = URL(string:urlString)!
         
         var didRespond = false
