@@ -68,6 +68,7 @@ public enum BlockstackConstants {
                        manifestURI: URL? = nil,
                        scopes: [AuthScope] = [.storeWrite],
                        sendToSignIn: Bool,
+                       callbackUrlScheme: String,
                        completion: @escaping (AuthResult) -> ()) {
         print("signing in")
         
@@ -122,7 +123,7 @@ public enum BlockstackConstants {
 
         DispatchQueue.main.async {
             if #available(iOS 12.0, *) {
-                let authSession = ASWebAuthenticationSession(url: url, callbackURLScheme: redirectURI.absoluteString, completionHandler: completion)
+                let authSession = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackUrlScheme, completionHandler: completion)
                 if #available(iOS 13.0, *) {
                      authSession.presentationContextProvider = self
                 }

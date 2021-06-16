@@ -56,10 +56,10 @@ extension Blockstack {
      - parameter scopes: An array of strings indicating which permissions this app is requesting; defaults to requesting write access to this app's data store ("store_write")/
      - parameter completion: Callback with an AuthResult object.
      */
-    @objc(signInWithRedirectURI:appDomain:manifestURI:scopes:sendToSignIn:completion:)
-    public func objc_signIn(redirectURI: URL, appDomain: URL, manifestURI: URL? = nil, scopes: Array<String> = ["store_write"], sendToSignIn: Bool, completion: @escaping (ObjCAuthResult) -> ()) {
+    @objc(signInWithRedirectURI:appDomain:manifestURI:scopes:sendToSignIn:callbackUrlScheme:completion:)
+    public func objc_signIn(redirectURI: URL, appDomain: URL, manifestURI: URL? = nil, scopes: Array<String> = ["store_write"], sendToSignIn: Bool, callbackUrlScheme: String, completion: @escaping (ObjCAuthResult) -> ()) {
         let enumScopes = scopes.compactMap { AuthScope.fromString($0) }
-        self.signIn(redirectURI: redirectURI, appDomain: appDomain, manifestURI: manifestURI, scopes: enumScopes, sendToSignIn: sendToSignIn) {
+        self.signIn(redirectURI: redirectURI, appDomain: appDomain, manifestURI: manifestURI, scopes: enumScopes, sendToSignIn: sendToSignIn, callbackUrlScheme: callbackUrlScheme) {
             completion(ObjCAuthResult($0))
         }
     }
