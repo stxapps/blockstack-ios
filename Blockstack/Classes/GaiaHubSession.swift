@@ -12,6 +12,8 @@ import Regex
 
 fileprivate let signatureFileSuffix = ".sig"
 
+public let FILE_PREFIX = "file://"
+
 class GaiaHubSession {
     let config: GaiaConfig
 
@@ -79,7 +81,20 @@ class GaiaHubSession {
         task.resume()
     }
     
-    func getFile(at path: String, decrypt: Bool, verify: Bool, multiplayerOptions: MultiplayerOptions? = nil, completion: @escaping (Any?, GaiaError?) -> Void) {
+    func getFile(at path: String, decrypt: Bool, verify: Bool, multiplayerOptions: MultiplayerOptions? = nil, dir: String = "", completion: @escaping (Any?, GaiaError?) -> Void) {
+
+        var path = path
+        var fileUrl: URL? = nil
+        if let range = path.range(of: FILE_PREFIX) {
+            fileUrl = URL(fileURLWithPath: path.replacingCharacters(in: range, with: dir + "/"))
+            if (FileManager.default.fileExists(atPath: fileUrl!.path)) {
+                completion("", nil)
+                return
+            }
+
+            path = path.replacingCharacters(in: range, with: "")
+        }
+
         // In the case of signature verification, but no decryption, we need to fetch two files.
         // First, fetch the unencrypted file. Then fetch the signature file and validate it.
         if verify && !decrypt {
@@ -172,6 +187,14 @@ class GaiaHubSession {
                 }
                 verifyAndGetCipherText.then({ cipherText in
                     let decryptedValue = Encryption.decryptECIES(cipherObjectJSONString: cipherText, privateKey: privateKey)
+                    
+                    if fileUrl != nil, let content = decryptedValue?.bytes {
+                        try Data(bytes: content).write(to: fileUrl!)
+
+                        completion("", nil)
+                        return
+                    }
+                    
                     completion(decryptedValue, nil)
                 }).catch { error in
                     completion(nil, error as? GaiaError ?? GaiaError.signatureVerificationError)
@@ -198,7 +221,21 @@ class GaiaHubSession {
         self.signAndPutData(to: path, content: data, originalContentType: "application/octet-stream", encrypted: encrypt, sign: sign, signingKey: signingKey, completion: completion)
     }
     
-    func putFile(to path: String, content: String, encrypt: Bool, encryptionKey: String?, sign: Bool, signingKey: String?, completion: @escaping (String?, GaiaError?) -> ()) {
+    func putFile(to path: String, content: String, encrypt: Bool, encryptionKey: String?, sign: Bool, signingKey: String?, dir: String = "", completion: @escaping (String?, GaiaError?) -> ()) {
+        
+        if let range = path.range(of: FILE_PREFIX) {
+            let fileUrl = URL(fileURLWithPath: path.replacingCharacters(in: range, with: dir + "/"))
+            if (!FileManager.default.fileExists(atPath: fileUrl.path)) {
+                completion("file-does-not-exist/do-nothing-just-return", nil)
+                return
+            }
+
+            let path = path.replacingCharacters(in: range, with: "")
+            let content = (try! Data(contentsOf: fileUrl)).bytes
+            putFile(to: path, content: content, encrypt: encrypt, encryptionKey: encryptionKey, sign: sign, signingKey: signingKey, completion: completion)
+            return
+        }
+
         guard let data = encrypt ?
             self.encrypt(content: .text(content), with: encryptionKey) :
             content.data(using: .utf8) else {

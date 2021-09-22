@@ -59,6 +59,30 @@ class ViewController: UIViewController {
     }
     
     @IBAction func putFileTapped(_ sender: Any) {
+        /*print("Start.")
+        let img = UIImage(named: "Team")
+        let data = UIImageJPEGRepresentation(img!, 0.92)
+        print("data size: ", data?.count)
+        
+        let documentDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
+        print("documentDir: ", documentDir)
+
+        let dirUrl = URL(fileURLWithPath: documentDir + "/images")
+        try! FileManager.default.createDirectory(at: dirUrl, withIntermediateDirectories: true, attributes: nil)
+        
+        let fileUrl = URL(fileURLWithPath: documentDir + "/images/team.jpg")
+        try! data?.write(to: fileUrl)
+            
+        Blockstack.shared.putFile(to: "file://images/team.jpg", text: "", encrypt: true, sign: false, signingKey: nil, dir: documentDir) { (publicURL, error) in
+            if error != nil {
+                print("put file error")
+            } else {
+                print("put file success \(publicURL ?? "NA")")
+            }
+        }
+        print("End.")
+        return*/
+
 //        guard self.saveInvalidGaiaConfig() else {
 //            return
 //        }
@@ -214,6 +238,34 @@ class ViewController: UIViewController {
     }
     
     @IBAction func getFileTapped(_ sender: Any) {
+        /*print("Start.")
+        let documentDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
+        print("documentDir: ", documentDir)
+
+        let fileUrl = URL(fileURLWithPath: documentDir + "/images/team.jpg")
+        let attrs = try! FileManager.default.attributesOfItem(atPath: fileUrl.path)
+        print("file size: ", attrs[.size])
+        
+        let data = try! Data(contentsOf: fileUrl)
+        print("data size: ", data.count)
+
+        try! FileManager.default.removeItem(at: fileUrl)
+
+        let existed = FileManager.default.fileExists(atPath: fileUrl.path)
+        print("file existed: ", existed)
+
+        Blockstack.shared.getFile(at: "file://images/team.jpg", decrypt: true, verify: false, dir: documentDir) { response, error in
+          if error != nil {
+            print("get file error")
+          } else {
+            print("get file success")
+
+            let existed = FileManager.default.fileExists(atPath: fileUrl.path)
+            print("file existed: ", existed)
+          }
+        }
+        print("End.")*/
+
         // Read data from Gaia
         Blockstack.shared.getFile(at: filename, verify: true) { response, error in
             var text: String?
@@ -296,9 +348,11 @@ class ViewController: UIViewController {
                         break
                     }
                 }
-                let alert = UIAlertController(title: "List Files", message: message, preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
-                self.present(alert, animated: true, completion: nil)
+                DispatchQueue.main.async {
+                    let alert = UIAlertController(title: "List Files", message: message, preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
+                    self.present(alert, animated: true, completion: nil)
+                }
             })
         })
         sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
