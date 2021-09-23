@@ -9,7 +9,7 @@ import UIKit
 import Blockstack
 import SafariServices
 
-fileprivate let filename = "testFile"
+fileprivate let filename = "My List/testFile"
 
 class ViewController: UIViewController {
 
@@ -70,10 +70,10 @@ class ViewController: UIViewController {
         let dirUrl = URL(fileURLWithPath: documentDir + "/images")
         try! FileManager.default.createDirectory(at: dirUrl, withIntermediateDirectories: true, attributes: nil)
         
-        let fileUrl = URL(fileURLWithPath: documentDir + "/images/team.jpg")
+        let fileUrl = URL(fileURLWithPath: documentDir + "/images/my team.jpg")
         try! data?.write(to: fileUrl)
             
-        Blockstack.shared.putFile(to: "file://images/team.jpg", text: "", encrypt: true, sign: false, signingKey: nil, dir: documentDir) { (publicURL, error) in
+        Blockstack.shared.putFile(to: "file://images/my team.jpg", text: "", encrypt: true, sign: false, signingKey: nil, dir: documentDir) { (publicURL, error) in
             if error != nil {
                 print("put file error")
             } else {
@@ -242,7 +242,7 @@ class ViewController: UIViewController {
         let documentDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         print("documentDir: ", documentDir)
 
-        let fileUrl = URL(fileURLWithPath: documentDir + "/images/team.jpg")
+        let fileUrl = URL(fileURLWithPath: documentDir + "/images/my team.jpg")
         let attrs = try! FileManager.default.attributesOfItem(atPath: fileUrl.path)
         print("file size: ", attrs[.size])
         
@@ -254,7 +254,7 @@ class ViewController: UIViewController {
         let existed = FileManager.default.fileExists(atPath: fileUrl.path)
         print("file existed: ", existed)
 
-        Blockstack.shared.getFile(at: "file://images/team.jpg", decrypt: true, verify: false, dir: documentDir) { response, error in
+        Blockstack.shared.getFile(at: "file://images/my team.jpg", decrypt: true, verify: false, dir: documentDir) { response, error in
           if error != nil {
             print("get file error")
           } else {

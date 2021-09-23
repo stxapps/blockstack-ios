@@ -297,16 +297,17 @@ class GaiaHubSession {
     
     private func getFileContents(at path: String, multiplayerOptions: MultiplayerOptions?) -> Promise<(Data, String)> {
         let getReadURL = Promise<URL> { resolve, reject in
+            let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
             if let options = multiplayerOptions {
-                Blockstack.shared.getUserAppFileURL(at: path, username: options.username, appOrigin: options.app, zoneFileLookupURL: options.zoneFileLookupURL) {
-                    guard let fetchURL = $0?.appendingPathComponent(path) else {
+                Blockstack.shared.getUserAppFileURL(at: escapedPath, username: options.username, appOrigin: options.app, zoneFileLookupURL: options.zoneFileLookupURL) {
+                    guard let fetchURL = $0?.appendingPathComponent(escapedPath) else {
                         reject(GaiaError.requestError)
                         return
                     }
                     resolve(fetchURL)
                 }
             } else {
-                resolve(URL(string: "\(self.config.URLPrefix!)\(self.config.address!)/\(path)")!)
+                resolve(URL(string: "\(self.config.URLPrefix!)\(self.config.address!)/\(escapedPath)")!)
             }
         }
         return Promise<(Data, String)>() { resolve, reject in
@@ -365,7 +366,8 @@ class GaiaHubSession {
     
     private func deleteItem(at path: String) -> Promise<Void> {
         return Promise<Void>() { resolve, reject in
-            guard let url = URL(string:"\(self.config.server!)/delete/\(self.config.address!)/\(path)") else {
+            let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
+            guard let url = URL(string:"\(self.config.server!)/delete/\(self.config.address!)/\(escapedPath)") else {
                 reject(GaiaError.configurationError)
                 return
             }
@@ -442,7 +444,8 @@ class GaiaHubSession {
     }
     
     private func upload(path: String, contentType: String, data: Data, completion: @escaping (String?, GaiaError?) -> ()) {
-        let putURL = URL(string:"\(self.config.server!)/store/\(self.config.address!)/\(path)")
+        let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
+        let putURL = URL(string:"\(self.config.server!)/store/\(self.config.address!)/\(escapedPath)")
         var request = URLRequest(url: putURL!)
         request.httpMethod = "POST"
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
