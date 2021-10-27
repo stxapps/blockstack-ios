@@ -183,6 +183,10 @@ public enum BlockstackConstants {
         return Keys.makeECPrivateKey()
     }
 
+    public func updateUserData(userData: UserData) {
+        ProfileHelper.storeProfile(profileData: userData)
+    }
+
     /**
      Retrieves the user data object. The user's profile is stored in the key `profile`.
      */
