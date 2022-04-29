@@ -359,6 +359,14 @@ class ViewController: UIViewController {
         self.present(sheet, animated: true, completion: nil)
     }
 
+    @IBAction func signECDSA(_ sender: Any) {
+        let privateKey = ""
+        let content = "Privacy Security UX"
+
+        let sigObj = Blockstack.signECDSA(privateKey: privateKey, content: content, canonical: true)
+        print("sigObj: ", sigObj as Any)
+    }
+
     // MARK: - Private
     
     private func saveInvalidGaiaConfig() -> Bool {

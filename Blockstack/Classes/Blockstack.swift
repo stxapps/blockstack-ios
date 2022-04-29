@@ -52,7 +52,7 @@ public enum BlockstackConstants {
             UserDefaults.standard.set(self.isBetaBrowserEnabled, forKey: betaBrowserDefaultsKey)
         }
     }
-    
+
     // - MARK: Authentication
     
     /**
@@ -964,6 +964,12 @@ public enum BlockstackConstants {
     @available(iOS 12.0, *)
     public func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         return UIApplication.shared.keyWindow!
+    }
+
+    // MARK: - Static
+
+    public static func signECDSA(privateKey: String, content: String, canonical: Bool) -> SignatureObject? {
+        return EllipticJS().signECDSA(privateKey: privateKey, content: content.bytes, canonical: canonical)
     }
 
     // MARK: - Private
