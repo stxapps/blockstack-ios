@@ -88,7 +88,7 @@ class GaiaHubSession {
         if let range = path.range(of: FILE_PREFIX) {
             fileUrl = URL(fileURLWithPath: path.replacingCharacters(in: range, with: dir + "/"))
             if (FileManager.default.fileExists(atPath: fileUrl!.path)) {
-                completion("", nil)
+                completion(DecryptedValue(text: ""), nil)
                 return
             }
 
@@ -191,7 +191,7 @@ class GaiaHubSession {
                     if fileUrl != nil, let content = decryptedValue?.bytes {
                         try Data(bytes: content).write(to: fileUrl!)
 
-                        completion("", nil)
+                        completion(DecryptedValue(text: ""), nil)
                         return
                     }
                     
