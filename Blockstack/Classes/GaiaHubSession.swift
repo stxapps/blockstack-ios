@@ -88,7 +88,11 @@ class GaiaHubSession {
         if let range = path.range(of: FILE_PREFIX) {
             fileUrl = URL(fileURLWithPath: path.replacingCharacters(in: range, with: dir + "/"))
             if (FileManager.default.fileExists(atPath: fileUrl!.path)) {
-                completion(DecryptedValue(text: ""), nil)
+                if decrypt {
+                    completion(DecryptedValue(text: ""), nil)
+                } else {
+                    completion("", nil)
+                }
                 return
             }
 
