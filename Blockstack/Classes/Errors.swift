@@ -19,4 +19,6 @@ public enum AuthError: Error {
     case signatureVerificationError
     case itemNotFoundError
     case serverError
+    case accessVerificationError
+    case payloadTooLargeError
 }

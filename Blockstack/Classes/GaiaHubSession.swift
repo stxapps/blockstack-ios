@@ -33,14 +33,17 @@ class GaiaHubSession {
         if callCount > 65536 {
             // This is ridiculously huge, and probably indicates a faulty Gaia hub anyway (e.g. on that serves endless data).
             completion(-1, GaiaError.invalidResponse)
+            return
         }
 
         guard let server = self.config.server,
             let address = self.config.address,
             let token = self.config.token,
             let url = URL(string: "\(server)/list-files/\(address)") else {
+                completion(-1, GaiaError.configurationError)
                 return
         }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -51,16 +54,28 @@ class GaiaHubSession {
         request.httpBody = body
 
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            guard error == nil,
-                let data = data,
-                let jsonObject = try? JSONSerialization.jsonObject(with: data, options: .allowFragments),
-                let result = jsonObject as? [String: Any],
-                let entries = result["entries"] as? [String],
-                result.keys.contains("page") else {
-                    completion(-1, GaiaError.invalidResponse)
-                    return
+            guard error == nil, let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(-1, GaiaError.requestError)
+                return
+            }
+            
+            let code = httpResponse.statusCode
+            if code == 401 {
+                completion(-1, GaiaError.accessVerificationError)
+                return
+            } else if code >= 500 {
+                completion(-1, GaiaError.serverError)
+                return
             }
 
+            guard let jsonObject = try? JSONSerialization.jsonObject(with: data, options: .allowFragments),
+                  let result = jsonObject as? [String: Any],
+                  let entries = result["entries"] as? [String],
+                  result.keys.contains("page") else {
+                completion(-1, GaiaError.invalidResponse)
+                return
+            }
+            
             var fileCount = fileCount
             for entry in entries {
                 fileCount += 1
@@ -317,22 +332,28 @@ class GaiaHubSession {
         return Promise<(Data, String)>() { resolve, reject in
             getReadURL.then({ url in
                 let task = URLSession.shared.dataTask(with: url) { data, response, error in
-                    guard error == nil,
-                        let httpResponse = response as? HTTPURLResponse,
-                        let data = data else {
-                            print("Gaia hub store request error")
-                            reject(GaiaError.requestError)
-                            return
+                    guard error == nil, let httpResponse = response as? HTTPURLResponse, let data = data else {
+                        reject(GaiaError.requestError)
+                        return
                     }
-                    switch httpResponse.statusCode {
-                    case 200:
+
+                    let code = httpResponse.statusCode
+                    if code == 401 {
+                        reject(GaiaError.accessVerificationError)
+                        return
+                    } else if code == 404 {
+                        reject(GaiaError.itemNotFoundError)
+                        return
+                    } else if code >= 500 {
+                        reject(GaiaError.serverError)
+                        return
+                    } else if code >= 200 && code <= 299 {
                         let contentType = httpResponse.allHeaderFields["Content-Type"] as? String ?? "application/json"
                         resolve((data, contentType))
-                    case 404:
-                        reject(GaiaError.itemNotFoundError)
-                    default:
-                        reject(GaiaError.serverError)
+                        return
                     }
+
+                    reject(GaiaError.invalidResponse)
                 }
                 task.resume()
             }).catch { error in
@@ -379,21 +400,27 @@ class GaiaHubSession {
             request.httpMethod = "DELETE"
             request.addValue("bearer \(self.config.token!)", forHTTPHeaderField: "Authorization")
             let task = URLSession.shared.dataTask(with: request) { _, response, error in
-                guard error == nil else {
-                    print("Gaia hub store request error")
+                guard error == nil, let httpResponse = response as? HTTPURLResponse else {
                     reject(GaiaError.requestError)
                     return
                 }
-                if let code = (response as? HTTPURLResponse)?.statusCode {
-                    if code == 404 {
-                        reject(GaiaError.itemNotFoundError)
-                        return
-                    } else if code < 200 || code > 299 {
-                        reject(GaiaError.requestError)
-                        return
-                    }
+
+                let code = httpResponse.statusCode
+                if code == 401 {
+                    reject(GaiaError.accessVerificationError)
+                    return
+                } else if code == 404 {
+                    reject(GaiaError.itemNotFoundError)
+                    return
+                } else if code >= 500 {
+                    reject(GaiaError.serverError)
+                    return
+                } else if code >= 200 && code <= 299 {
+                    resolve(())
+                    return
                 }
-                resolve(())
+
+                reject(GaiaError.invalidResponse)
             }
             task.resume()
         }
@@ -457,15 +484,20 @@ class GaiaHubSession {
         request.httpBody = data
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            guard let data = data, error == nil else {
-                print("Gaia hub store request error")
+            guard error == nil, let httpResponse = response as? HTTPURLResponse, let data = data else {
                 completion(nil, GaiaError.requestError)
                 return
             }
 
-            // Check for specific codes that indicate config error
-            if (response as? HTTPURLResponse)?.statusCode == 401 {
-                completion(nil, GaiaError.configurationError)
+            let code = httpResponse.statusCode
+            if code == 401 {
+                completion(nil, GaiaError.accessVerificationError)
+                return
+            } else if code == 413 {
+                completion(nil, GaiaError.payloadTooLargeError)
+                return
+            } else if code >= 500 {
+                completion(nil, GaiaError.serverError)
                 return
             }
             

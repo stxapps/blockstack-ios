@@ -501,7 +501,7 @@ public enum BlockstackConstants {
         Gaia.getOrSetLocalHubConnection() { session, error in
             guard let session = session, error == nil else {
                 print("gaia connection error")
-                completion(-1, GaiaError.connectionError)
+                completion(-1, error)
                 return
             }
             session.listFilesLoop(page: nil, callCount: 0, fileCount: 0, callback: callback, completion: completion)
@@ -534,7 +534,7 @@ public enum BlockstackConstants {
                 return
             }
             session.putFile(to: path, content: text, encrypt: encrypt, encryptionKey: nil, sign: sign, signingKey: signingKey, dir: dir) { url, error in
-                guard error != .configurationError else {
+                guard error != .accessVerificationError else {
                     // Retry with a new config
                     Gaia.setLocalGaiaHubConnection() { session, error in
                         guard let session = session, error == nil else {
@@ -576,7 +576,7 @@ public enum BlockstackConstants {
                 return
             }
             session.putFile(to: path, content: bytes, encrypt: encrypt, encryptionKey: nil, sign: sign, signingKey: signingKey) { url, error in
-                guard error != .configurationError else {
+                guard error != .accessVerificationError else {
                     // Retry with a new config
                     Gaia.setLocalGaiaHubConnection { session, error in
                         guard let session = session, error == nil else {
