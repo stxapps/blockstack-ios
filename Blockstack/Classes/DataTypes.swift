@@ -26,6 +26,7 @@ public struct UserData: Codable {
     public let username, email, coreToken, profileURL, hubURL, version: String?
     public let claim: Profile?
     public var profile: Profile?
+    public let gaiaAssociationToken: String?
 
     enum CodingKeys: String, CodingKey {
         case jti, iat, exp, iss
@@ -37,6 +38,7 @@ public struct UserData: Codable {
         case profileURL = "profile_url"
         case hubURL = "hubUrl"
         case version
+        case gaiaAssociationToken
     }
 }
 

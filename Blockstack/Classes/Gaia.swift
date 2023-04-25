@@ -25,11 +25,14 @@ class Gaia {
         let userData = ProfileHelper.retrieveProfile()
         let hubURL = userData?.hubURL ?? BlockstackConstants.DefaultGaiaHubURL
         guard let appPrivateKey = userData?.privateKey else {
-            // TODO: Return appropriate error
-            callback(nil, nil)
+            callback(nil, GaiaError.configurationError)
             return
         }
-        self.connectToHub(hubURL: hubURL, challengeSignerHex: appPrivateKey) { session, error in
+        guard let gaiaAssociationToken = userData?.gaiaAssociationToken else {
+            callback(nil, GaiaError.configurationError)
+            return
+        }
+        self.connectToHub(hubURL: hubURL, challengeSignerHex: appPrivateKey, gaiaAssociationToken: gaiaAssociationToken) { session, error in
             self.session = session
             callback(session, error)
         }
@@ -52,19 +55,43 @@ class Gaia {
         }
     }
     
-    private static func connectToHub(hubURL: String, challengeSignerHex: String, completion: @escaping (GaiaHubSession?, GaiaError?) -> Void) {
+    private static func connectToHub(hubURL: String, challengeSignerHex: String, gaiaAssociationToken: String, completion: @escaping (GaiaHubSession?, GaiaError?) -> Void) {
         self.getHubInfo(for: hubURL) { hubInfo, error in
             guard error == nil else {
                 completion(nil, GaiaError.connectionError)
                 return
             }
-            let bitcoinJS = BitcoinJS()
-            let signature = bitcoinJS.signChallenge(privateKey: challengeSignerHex, challengeText: hubInfo!.challengeText!)
-            let publicKey = Keys.getPublicKeyFromPrivate(challengeSignerHex, compressed: true)
-            let tokenObject: [String: Any?] = ["publickey": publicKey, "signature": signature]
-            let token = tokenObject.toJsonString()?.encodingToBase64()
-            let address = Keys.getAddressFromPublicKey(publicKey!)
-            let config = GaiaConfig(URLPrefix: hubInfo?.readURLPrefix, address: address, token: token, server: hubURL)
+            guard let gaiaChallenge = hubInfo!.challengeText,
+                  let latestAuthVersion = hubInfo!.latestAuthVersion,
+                  let readURLPrefix = hubInfo!.readURLPrefix,
+                  let iss = Keys.getPublicKeyFromPrivate(challengeSignerHex, compressed: true),
+                  let salt = Keys.getEntropy(numberOfBytes:16) else {
+                completion(nil, GaiaError.configurationError)
+                return
+            }
+
+            let lavIndex = latestAuthVersion.index(latestAuthVersion.startIndex, offsetBy: 1)
+            let lavNum = Int(latestAuthVersion[lavIndex...]) ?? 0
+            if (lavNum < 1) {
+                completion(nil, GaiaError.configurationError)
+                return
+            }
+
+            let payload: [String: Any] = [
+                "gaiaChallenge": gaiaChallenge,
+                "hubUrl": hubURL,
+                "iss": iss,
+                "salt": salt,
+                "gaiaAssociationToken": gaiaAssociationToken
+            ]
+            guard let address = Keys.getAddressFromPublicKey(iss),
+                  let signedPayload = JSONTokensJS().signToken(payload: payload, privateKey: challengeSignerHex) else {
+                completion(nil, GaiaError.configurationError)
+                return
+            }
+            let token = "v1:\(signedPayload)"
+
+            let config = GaiaConfig(URLPrefix: readURLPrefix, address: address, token: token, server: hubURL)
             completion(GaiaHubSession(with: config), nil)
         }
     }
@@ -129,9 +156,11 @@ public struct GaiaConfig: Codable {
 public struct GaiaHubInfo: Codable {
     let challengeText: String?
     let readURLPrefix: String?
+    let latestAuthVersion: String?
     
     enum CodingKeys: String, CodingKey {
         case challengeText = "challenge_text"
         case readURLPrefix = "read_url_prefix"
+        case latestAuthVersion = "latest_auth_version"
     }
 }
