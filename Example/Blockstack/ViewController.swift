@@ -37,6 +37,22 @@ class ViewController: UIViewController {
                     print("sign in failed, error: ", error ?? "n/a")
             }
         }
+        /*let dict = [
+            "decentralizedID": "",
+            "iss": "",
+            "identityAddress": "",
+            "public_keys": [""],
+            "appPrivateKey": "",
+            "private_key": "",
+            "hubUrl": "",
+            "gaiaAssociationToken": "",
+        ] as [String : Any]
+
+        let jsonDecoder = JSONDecoder()
+        let data = try? JSONSerialization.data(withJSONObject: dict)
+        let userData = try? jsonDecoder.decode(UserData.self, from: data!)
+        Blockstack.shared.updateUserData(userData: userData!)
+        self.updateUI()*/
     }
     
     func handleSignInSuccess(userData: UserData) {
