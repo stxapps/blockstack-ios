@@ -28,10 +28,8 @@ class Gaia {
             callback(nil, GaiaError.configurationError)
             return
         }
-        guard let gaiaAssociationToken = userData?.gaiaAssociationToken else {
-            callback(nil, GaiaError.configurationError)
-            return
-        }
+        // If signed in from previous version, no gaiaAssociationToken in UserData.
+        let gaiaAssociationToken = userData?.gaiaAssociationToken
         self.connectToHub(hubURL: hubURL, challengeSignerHex: appPrivateKey, gaiaAssociationToken: gaiaAssociationToken) { session, error in
             self.session = session
             callback(session, error)
@@ -55,7 +53,7 @@ class Gaia {
         }
     }
     
-    private static func connectToHub(hubURL: String, challengeSignerHex: String, gaiaAssociationToken: String, completion: @escaping (GaiaHubSession?, GaiaError?) -> Void) {
+    private static func connectToHub(hubURL: String, challengeSignerHex: String, gaiaAssociationToken: String?, completion: @escaping (GaiaHubSession?, GaiaError?) -> Void) {
         self.getHubInfo(for: hubURL) { hubInfo, error in
             guard error == nil else {
                 completion(nil, GaiaError.connectionError)
@@ -77,13 +75,15 @@ class Gaia {
                 return
             }
 
-            let payload: [String: Any] = [
+            var payload: [String: Any] = [
                 "gaiaChallenge": gaiaChallenge,
                 "hubUrl": hubURL,
                 "iss": iss,
                 "salt": salt,
-                "gaiaAssociationToken": gaiaAssociationToken
             ]
+            if let gaiaAssociationToken = gaiaAssociationToken {
+                payload["gaiaAssociationToken"] = gaiaAssociationToken
+            }
             guard let address = Keys.getAddressFromPublicKey(iss),
                   let signedPayload = JSONTokensJS().signToken(payload: payload, privateKey: challengeSignerHex) else {
                 completion(nil, GaiaError.configurationError)
