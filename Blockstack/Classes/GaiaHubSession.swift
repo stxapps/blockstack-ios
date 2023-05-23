@@ -208,6 +208,11 @@ class GaiaHubSession {
                     let decryptedValue = Encryption.decryptECIES(cipherObjectJSONString: cipherText, privateKey: privateKey)
                     
                     if fileUrl != nil, let content = decryptedValue?.bytes {
+                        let dirUrl = fileUrl!.deletingLastPathComponent()
+                        if (dirUrl.hasDirectoryPath && !FileManager.default.fileExists(atPath: dirUrl.path)) {
+                            try FileManager.default.createDirectory(at: dirUrl, withIntermediateDirectories: true)
+                        }
+
                         try Data(bytes: content).write(to: fileUrl!)
 
                         completion(DecryptedValue(text: ""), nil)
