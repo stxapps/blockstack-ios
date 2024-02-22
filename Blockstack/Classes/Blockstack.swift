@@ -689,6 +689,17 @@ public enum BlockstackConstants {
         }
     }
 
+    @objc public func performFiles(pfData: String, dir: String, completion: @escaping (String?, Error?) -> Void) {
+        Gaia.getOrSetLocalHubConnection { session, error in
+            guard let session = session, error == nil else {
+                print("gaia connection error")
+                completion(nil, error)
+                return
+            }
+            session.performFiles(pfData: pfData, dir: dir, completion: completion)
+        }
+    }
+
     /**
      Encrypts the data provided with the app public key.
      - parameter bytes: Bytes (Array<UInt8>) data to encrypt.

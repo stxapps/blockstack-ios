@@ -17,6 +17,40 @@ class Encryption {
         return encryptionJS.decryptECIES(privateKey: privateKey, cipherObjectJSONString: cipherObjectJSONString!)?.plainText
     }
     
+    static func encryptECIESAsDict(content: Bytes, recipientPublicKey: String, isString: Bool) throws -> [String: Any] {
+        guard let ephemeralSK = Keys.makeECPrivateKey(),
+              let sharedSecret = Keys.deriveSharedSecret(
+                ephemeralSecretKey: ephemeralSK, recipientPublicKey: recipientPublicKey
+              ) else {
+            throw NSError.create(description: "In encryptECIESAsDict, invalid ephemeralSK or sharedSecret")
+        }
+
+        let data = Bytes(hex: sharedSecret)
+        let hashedSecretBytes = data.sha512()
+        let encryptionKey = Array(hashedSecretBytes.prefix(32))
+        let hmacKey = Array(hashedSecretBytes.suffix(from: 32))
+        let initializationVector = AES.randomIV(16)
+
+        let aes = try AES(key: encryptionKey, blockMode: CBC(iv: initializationVector))
+        let cipherText = try aes.encrypt(content)
+        guard let compressedEphemeralPKHex = Keys.getPublicKeyFromPrivate(ephemeralSK, compressed: true) else {
+            throw NSError.create(description: "In encryptECIESAsDict, invalid compressedEphemeralPKHex")
+        }
+
+        let compressedEphemeralPKBytes = Bytes(hex: compressedEphemeralPKHex)
+        let macData = initializationVector + compressedEphemeralPKBytes + cipherText
+        let mac = try HMAC(key: hmacKey, variant: .sha256).authenticate(macData)
+        let cipherObject: [String: Any] = [
+            "iv": initializationVector.toHexString(),
+            "ephemeralPK": compressedEphemeralPKHex,
+            "cipherText": Data(bytes: cipherText).hexEncodedString(),
+            "mac": mac.toHexString(),
+            "wasString": isString
+        ]
+
+        return cipherObject
+    }
+
     static func encryptECIES(content: Bytes, recipientPublicKey: String, isString: Bool) -> String? {
         guard let ephemeralSK = Keys.makeECPrivateKey(),
             let sharedSecret = Keys.deriveSharedSecret(ephemeralSecretKey: ephemeralSK, recipientPublicKey: recipientPublicKey) else {

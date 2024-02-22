@@ -102,7 +102,7 @@ class GaiaHubSession {
         var fileUrl: URL? = nil
         if let range = path.range(of: FILE_PREFIX) {
             fileUrl = URL(fileURLWithPath: path.replacingCharacters(in: range, with: dir + "/"))
-            if (FileManager.default.fileExists(atPath: fileUrl!.path)) {
+            if let fileUrl = fileUrl, FileManager.default.fileExists(atPath: fileUrl.path) {
                 if decrypt {
                     completion(DecryptedValue(text: ""), nil)
                 } else {
@@ -207,13 +207,13 @@ class GaiaHubSession {
                 verifyAndGetCipherText.then({ cipherText in
                     let decryptedValue = Encryption.decryptECIES(cipherObjectJSONString: cipherText, privateKey: privateKey)
                     
-                    if fileUrl != nil, let content = decryptedValue?.bytes {
-                        let dirUrl = fileUrl!.deletingLastPathComponent()
+                    if let fileUrl = fileUrl, let content = decryptedValue?.bytes {
+                        let dirUrl = fileUrl.deletingLastPathComponent()
                         if (dirUrl.hasDirectoryPath && !FileManager.default.fileExists(atPath: dirUrl.path)) {
                             try FileManager.default.createDirectory(at: dirUrl, withIntermediateDirectories: true)
                         }
 
-                        try Data(bytes: content).write(to: fileUrl!)
+                        try Data(bytes: content).write(to: fileUrl)
 
                         completion(DecryptedValue(text: ""), nil)
                         return
@@ -249,13 +249,13 @@ class GaiaHubSession {
         
         if let range = path.range(of: FILE_PREFIX) {
             let fileUrl = URL(fileURLWithPath: path.replacingCharacters(in: range, with: dir + "/"))
-            if (!FileManager.default.fileExists(atPath: fileUrl.path)) {
+            guard let _content = try? Data(contentsOf: fileUrl) else {
                 completion("file-does-not-exist/do-nothing-just-return", nil)
                 return
             }
 
             let path = path.replacingCharacters(in: range, with: "")
-            let content = (try! Data(contentsOf: fileUrl)).bytes
+            let content = Array(_content)
             putFile(to: path, content: content, encrypt: encrypt, encryptionKey: encryptionKey, sign: sign, signingKey: signingKey, completion: completion)
             return
         }
@@ -281,6 +281,106 @@ class GaiaHubSession {
         }).catch { error in
             completion(error)
         }
+    }
+    
+    func processPfData(pfData: [String: Any], dir: String, publicKey: String) throws -> [String: Any] {
+        var ppfData = pfData
+        if let values = pfData["values"] as? [[String: Any]], let isSequential = pfData["isSequential"] as? Bool {
+            var pValues = [[String: Any]]()
+            for value in values {
+                let pValue = try processPfData(pfData: value, dir: dir, publicKey: publicKey)
+                pValues.append(pValue)
+            }
+            ppfData["values"] = pValues
+        } else if let id = pfData["id"] as? String,
+                  let type = pfData["type"] as? String,
+                  let path = pfData["path"] as? String {
+            if type == "putFile" {
+                var content: Bytes, isString: Bool
+                if let range = path.range(of: FILE_PREFIX) {
+                    let fileUrl = URL(fileURLWithPath: path.replacingCharacters(in: range, with: dir + "/"))
+                    if let _content = try? Data(contentsOf: fileUrl) {
+                        content = Array(_content)
+                    } else {
+                        content = Array("".utf8)
+                    }
+                    isString = false
+
+                    ppfData["path"] = path.replacingCharacters(in: range, with: "")
+                } else {
+                    guard let _content = pfData["content"] as? String else {
+                        throw NSError.create(description: "In processPfData, invalid content: \(pfData)")
+                    }
+                    content = Array(_content.utf8)
+                    isString = true;
+                }
+
+                let ect = try Encryption.encryptECIESAsDict(
+                    content: content, recipientPublicKey: publicKey, isString: isString
+                )
+                ppfData["content"] = ect
+            }
+        } else {
+            print("In processPfData, invalid data: \(pfData)")
+        }
+        return ppfData
+    }
+    
+    func performFiles(pfData: String, dir: String, completion: @escaping (String?, Error?) -> Void) {
+        guard let privateKey = ProfileHelper.retrieveProfile()?.privateKey,
+              let publicKey = Keys.getPublicKeyFromPrivate(privateKey),
+              let server = self.config.server,
+              let address = self.config.address,
+              let token = self.config.token,
+              let url = URL(string: "\(server)/perform-files/\(address)") else {
+            print("In performFiles, invalid privateKey or config")
+            completion(nil, GaiaError.configurationError)
+            return
+        }
+
+        guard let dpfData = pfData.data(using: .utf8),
+              let jpfData = try? JSONSerialization.jsonObject(with: dpfData, options: .allowFragments),
+              let ipfData = jpfData as? [String: Any],
+              let ppfData = try? processPfData(pfData: ipfData, dir: dir, publicKey: publicKey),
+              let fpfData = try? JSONSerialization.data(withJSONObject: ppfData) else {
+            print("In performFiles, invalid pfData")
+            completion(nil, GaiaError.configurationError)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = fpfData
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            guard error == nil, let httpResponse = response as? HTTPURLResponse, let data = data else {
+                completion(nil, GaiaError.requestError)
+                return
+            }
+            
+            let code = httpResponse.statusCode
+            if code == 401 {
+                completion(nil, GaiaError.accessVerificationError)
+                return
+            } else if code == 403 {
+                completion(nil, GaiaError.payloadTooLargeError)
+                return
+            } else if code == 404 {
+                completion(nil, GaiaError.itemNotFoundError)
+                return
+            } else if code >= 500 {
+                completion(nil, GaiaError.serverError)
+                return
+            } else if code >= 200 && code <= 299, let responseText = String(data: data, encoding: .utf8) {
+                completion(responseText, nil)
+                return
+            }
+            
+            completion(nil, GaiaError.invalidResponse)
+        }
+        task.resume()
     }
     
     // MARK: - Private
@@ -321,7 +421,10 @@ class GaiaHubSession {
     
     private func getFileContents(at path: String, multiplayerOptions: MultiplayerOptions?) -> Promise<(Data, String)> {
         let getReadURL = Promise<URL> { resolve, reject in
-            let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
+            guard let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
+                reject(GaiaError.configurationError)
+                return
+            }
             if let options = multiplayerOptions {
                 Blockstack.shared.getUserAppFileURL(at: escapedPath, username: options.username, appOrigin: options.app, zoneFileLookupURL: options.zoneFileLookupURL) {
                     guard let fetchURL = $0?.appendingPathComponent(escapedPath) else {
@@ -331,7 +434,13 @@ class GaiaHubSession {
                     resolve(fetchURL)
                 }
             } else {
-                resolve(URL(string: "\(self.config.URLPrefix!)\(self.config.address!)/\(escapedPath)")!)
+                guard let urlPrefix = self.config.URLPrefix,
+                      let address = self.config.address,
+                      let url = URL(string: "\(urlPrefix)\(address)/\(escapedPath)") else {
+                    reject(GaiaError.configurationError)
+                    return
+                }
+                resolve(url)
             }
         }
         return Promise<(Data, String)>() { resolve, reject in
@@ -396,14 +505,18 @@ class GaiaHubSession {
     
     private func deleteItem(at path: String) -> Promise<Void> {
         return Promise<Void>() { resolve, reject in
-            let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
-            guard let url = URL(string:"\(self.config.server!)/delete/\(self.config.address!)/\(escapedPath)") else {
+            
+            guard let server = self.config.server,
+                  let address = self.config.address,
+                  let token = self.config.token,
+                  let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+                  let url = URL(string:"\(self.config.server)/delete/\(self.config.address)/\(escapedPath)") else {
                 reject(GaiaError.configurationError)
                 return
             }
             var request = URLRequest(url: url)
             request.httpMethod = "DELETE"
-            request.addValue("bearer \(self.config.token!)", forHTTPHeaderField: "Authorization")
+            request.addValue("bearer \(token)", forHTTPHeaderField: "Authorization")
             let task = URLSession.shared.dataTask(with: request) { _, response, error in
                 guard error == nil, let httpResponse = response as? HTTPURLResponse else {
                     reject(GaiaError.requestError)
@@ -480,12 +593,19 @@ class GaiaHubSession {
     }
     
     private func upload(path: String, contentType: String, data: Data, completion: @escaping (String?, GaiaError?) -> ()) {
-        let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
-        let putURL = URL(string:"\(self.config.server!)/store/\(self.config.address!)/\(escapedPath)")
-        var request = URLRequest(url: putURL!)
+        guard let server = self.config.server,
+              let address = self.config.address,
+              let token = self.config.token,
+              let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let putURL = URL(string:"\(server)/store/\(address)/\(escapedPath)") else {
+            completion(nil, GaiaError.configurationError)
+            return
+        }
+
+        var request = URLRequest(url: putURL)
         request.httpMethod = "POST"
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        request.setValue("bearer \(self.config.token!)", forHTTPHeaderField: "Authorization")
+        request.setValue("bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpBody = data
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
