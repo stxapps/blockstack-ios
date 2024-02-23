@@ -350,8 +350,8 @@ class GaiaHubSession {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue("bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpBody = fpfData
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
@@ -364,7 +364,7 @@ class GaiaHubSession {
             if code == 401 {
                 completion(nil, GaiaError.accessVerificationError)
                 return
-            } else if code == 403 {
+            } else if code == 413 {
                 completion(nil, GaiaError.payloadTooLargeError)
                 return
             } else if code == 404 {
