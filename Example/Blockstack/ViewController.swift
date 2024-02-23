@@ -390,6 +390,8 @@ class ViewController: UIViewController {
     }
     
     @IBAction func performFiles(_ sender: Any) {
+        DispatchQueue.promises = .global()
+        
         /*let pfData =  """
         {"values":[{"id":"1708491132374-hjJQ-qGLN-1708491136062","type":"putFile","path":"links/1707816556114-IeqP/1708491132374-hjJQ-qGLN-1708491136062.json","content":"{\\"id\\":\\"1708491132374-hjJQ-qGLN-1708491136062\\",\\"url\\":\\"www.lyft.com\\",\\"addedDT\\":1708491132374,\\"decor\\":{\\"image\\":{\\"bg\\":{\\"type\\":\\"image\\",\\"value\\":\\"/static/media/silver-framed-eyeglasses-beside-white-click-pen-and-white-notebook.43cbd30b.jpg\\"},\\"fg\\":null},\\"favicon\\":{\\"bg\\":{\\"type\\":\\"color\\",\\"value\\":\\"bg-teal-300\\"}}},\\"extractedResult\\":{\\"url\\":\\"http://www.lyft.com\\",\\"status\\":\\"EXTRACT_OK\\",\\"title\\":\\"Lyft: A ride whenever you need one\\",\\"image\\":\\"https://images.ctfassets.net/q8mvene1wzq4/3amVLJGrSSKSYmDbFOCn9C/f7133270e145473d34a76d583294841d/04__2x.png\\",\\"extractedDT\\":1705309222422}}"}],"isSequential":false,"nItemsForNs":10}
         """*/

@@ -327,60 +327,70 @@ class GaiaHubSession {
     }
     
     func performFiles(pfData: String, dir: String, completion: @escaping (String?, Error?) -> Void) {
-        guard let privateKey = ProfileHelper.retrieveProfile()?.privateKey,
-              let publicKey = Keys.getPublicKeyFromPrivate(privateKey),
-              let server = self.config.server,
-              let address = self.config.address,
-              let token = self.config.token,
-              let url = URL(string: "\(server)/perform-files/\(address)") else {
-            print("In performFiles, invalid privateKey or config")
-            completion(nil, GaiaError.configurationError)
-            return
-        }
+        let promise = Promise<String>() { resolve, reject in
+            guard let privateKey = ProfileHelper.retrieveProfile()?.privateKey,
+                  let publicKey = Keys.getPublicKeyFromPrivate(privateKey),
+                  let server = self.config.server,
+                  let address = self.config.address,
+                  let token = self.config.token,
+                  let url = URL(string: "\(server)/perform-files/\(address)") else {
+                print("In performFiles, invalid privateKey or config")
+                reject(GaiaError.configurationError)
+                return
+            }
 
-        guard let dpfData = pfData.data(using: .utf8),
-              let jpfData = try? JSONSerialization.jsonObject(with: dpfData, options: .allowFragments),
-              let ipfData = jpfData as? [String: Any],
-              let ppfData = try? processPfData(pfData: ipfData, dir: dir, publicKey: publicKey),
-              let fpfData = try? JSONSerialization.data(withJSONObject: ppfData) else {
-            print("In performFiles, invalid pfData")
-            completion(nil, GaiaError.configurationError)
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.httpBody = fpfData
-        
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            guard error == nil, let httpResponse = response as? HTTPURLResponse, let data = data else {
-                completion(nil, GaiaError.requestError)
+            guard let dpfData = pfData.data(using: .utf8),
+                  let jpfData = try? JSONSerialization.jsonObject(with: dpfData, options: .allowFragments),
+                  let ipfData = jpfData as? [String: Any],
+                  let ppfData = try? self.processPfData(pfData: ipfData, dir: dir, publicKey: publicKey),
+                  let fpfData = try? JSONSerialization.data(withJSONObject: ppfData) else {
+                print("In performFiles, invalid pfData")
+                reject(GaiaError.configurationError)
                 return
             }
             
-            let code = httpResponse.statusCode
-            if code == 401 {
-                completion(nil, GaiaError.accessVerificationError)
-                return
-            } else if code == 413 {
-                completion(nil, GaiaError.payloadTooLargeError)
-                return
-            } else if code == 404 {
-                completion(nil, GaiaError.itemNotFoundError)
-                return
-            } else if code >= 500 {
-                completion(nil, GaiaError.serverError)
-                return
-            } else if code >= 200 && code <= 299, let responseText = String(data: data, encoding: .utf8) {
-                completion(responseText, nil)
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.httpBody = fpfData
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                guard error == nil, let httpResponse = response as? HTTPURLResponse, let data = data else {
+                    reject(GaiaError.requestError)
+                    return
+                }
+                
+                let code = httpResponse.statusCode
+                if code == 401 {
+                    reject(GaiaError.accessVerificationError)
+                    return
+                } else if code == 413 {
+                    reject(GaiaError.payloadTooLargeError)
+                    return
+                } else if code == 404 {
+                    reject(GaiaError.itemNotFoundError)
+                    return
+                } else if code >= 500 {
+                    reject(GaiaError.serverError)
+                    return
+                } else if code >= 200 && code <= 299, let responseText = String(data: data, encoding: .utf8) {
+                    resolve(responseText)
+                    return
+                }
+                
+                reject(GaiaError.invalidResponse)
                 return
             }
-            
-            completion(nil, GaiaError.invalidResponse)
+            task.resume()
         }
-        task.resume()
+        promise.then({ responseText in
+            completion(responseText, nil)
+            return
+        }).catch { error in
+            completion(nil, error)
+            return
+        }
     }
     
     // MARK: - Private
