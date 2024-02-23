@@ -55,13 +55,13 @@ class Gaia {
     
     private static func connectToHub(hubURL: String, challengeSignerHex: String, gaiaAssociationToken: String?, completion: @escaping (GaiaHubSession?, GaiaError?) -> Void) {
         self.getHubInfo(for: hubURL) { hubInfo, error in
-            guard error == nil else {
+            guard error == nil, let hubInfo = hubInfo else {
                 completion(nil, GaiaError.connectionError)
                 return
             }
-            guard let gaiaChallenge = hubInfo!.challengeText,
-                  let latestAuthVersion = hubInfo!.latestAuthVersion,
-                  let readURLPrefix = hubInfo!.readURLPrefix,
+            guard let gaiaChallenge = hubInfo.challengeText,
+                  let latestAuthVersion = hubInfo.latestAuthVersion,
+                  let readURLPrefix = hubInfo.readURLPrefix,
                   let iss = Keys.getPublicKeyFromPrivate(challengeSignerHex, compressed: true),
                   let salt = Keys.getEntropy(numberOfBytes:16) else {
                 completion(nil, GaiaError.configurationError)
