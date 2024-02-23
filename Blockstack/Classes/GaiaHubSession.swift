@@ -285,14 +285,14 @@ class GaiaHubSession {
     
     func processPfData(pfData: [String: Any], dir: String, publicKey: String) throws -> [String: Any] {
         var ppfData = pfData
-        if let values = pfData["values"] as? [[String: Any]], let isSequential = pfData["isSequential"] as? Bool {
+        if let values = pfData["values"] as? [[String: Any]], let _ = pfData["isSequential"] as? Bool {
             var pValues = [[String: Any]]()
             for value in values {
                 let pValue = try processPfData(pfData: value, dir: dir, publicKey: publicKey)
                 pValues.append(pValue)
             }
             ppfData["values"] = pValues
-        } else if let id = pfData["id"] as? String,
+        } else if let _ = pfData["id"] as? String,
                   let type = pfData["type"] as? String,
                   let path = pfData["path"] as? String {
             if type == "putFile" {
@@ -510,7 +510,7 @@ class GaiaHubSession {
                   let address = self.config.address,
                   let token = self.config.token,
                   let escapedPath = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-                  let url = URL(string:"\(self.config.server)/delete/\(self.config.address)/\(escapedPath)") else {
+                  let url = URL(string:"\(server)/delete/\(address)/\(escapedPath)") else {
                 reject(GaiaError.configurationError)
                 return
             }

@@ -78,7 +78,9 @@ class ViewController: UIViewController {
         /*print("Start.")
         let img = UIImage(named: "Team")
         let data = UIImageJPEGRepresentation(img!, 0.92)
-        print("data size: ", data?.count)
+        if let data = data {
+            print("data size: ", data.count)
+        }
         
         let documentDir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         print("documentDir: ", documentDir)
@@ -87,8 +89,9 @@ class ViewController: UIViewController {
         try! FileManager.default.createDirectory(at: dirUrl, withIntermediateDirectories: true, attributes: nil)
         
         let fileUrl = URL(fileURLWithPath: documentDir + "/images/my team.jpg")
+        //let fileUrl = URL(fileURLWithPath: documentDir + "/images/1708491132374-hjJQ-vets-1708496809761.jpg")
         try! data?.write(to: fileUrl)
-            
+        //try? FileManager.default.removeItem(at: fileUrl)
         Blockstack.shared.putFile(to: "file://images/my team.jpg", text: "", encrypt: true, sign: false, signingKey: nil, dir: documentDir) { (publicURL, error) in
             if error != nil {
                 print("put file error")
@@ -259,26 +262,29 @@ class ViewController: UIViewController {
         print("documentDir: ", documentDir)
 
         let fileUrl = URL(fileURLWithPath: documentDir + "/images/my team.jpg")
-        let attrs = try! FileManager.default.attributesOfItem(atPath: fileUrl.path)
-        print("file size: ", attrs[.size])
+        let attrs = try? FileManager.default.attributesOfItem(atPath: fileUrl.path)
+        if let attrs = attrs {
+            print("file size: ", attrs[.size] ?? 0)
+        }
+        let data = try? Data(contentsOf: fileUrl)
+        if let data = data {
+            print("data size: ", data.count)
+        }
         
-        let data = try! Data(contentsOf: fileUrl)
-        print("data size: ", data.count)
-
-        try! FileManager.default.removeItem(at: fileUrl)
-
+        try? FileManager.default.removeItem(at: fileUrl)
+        
         let existed = FileManager.default.fileExists(atPath: fileUrl.path)
         print("file existed: ", existed)
 
         Blockstack.shared.getFile(at: "file://images/my team.jpg", decrypt: true, verify: false, dir: documentDir) { response, error in
-          if error != nil {
-            print("get file error")
-          } else {
-            print("get file success")
-
-            let existed = FileManager.default.fileExists(atPath: fileUrl.path)
-            print("file existed: ", existed)
-          }
+            if error != nil {
+                print("get file error")
+            } else {
+                print("get file success")
+                
+                let existed = FileManager.default.fileExists(atPath: fileUrl.path)
+                print("file existed: ", existed)
+            }
         }
         print("End.")*/
 
@@ -382,7 +388,40 @@ class ViewController: UIViewController {
         let sigObj = Blockstack.signECDSA(privateKey: privateKey, content: content, canonical: true)
         print("sigObj: ", sigObj as Any)
     }
+    
+    @IBAction func performFiles(_ sender: Any) {
+        /*let pfData =  """
+        {"values":[{"id":"1708491132374-hjJQ-qGLN-1708491136062","type":"putFile","path":"links/1707816556114-IeqP/1708491132374-hjJQ-qGLN-1708491136062.json","content":"{\\"id\\":\\"1708491132374-hjJQ-qGLN-1708491136062\\",\\"url\\":\\"www.lyft.com\\",\\"addedDT\\":1708491132374,\\"decor\\":{\\"image\\":{\\"bg\\":{\\"type\\":\\"image\\",\\"value\\":\\"/static/media/silver-framed-eyeglasses-beside-white-click-pen-and-white-notebook.43cbd30b.jpg\\"},\\"fg\\":null},\\"favicon\\":{\\"bg\\":{\\"type\\":\\"color\\",\\"value\\":\\"bg-teal-300\\"}}},\\"extractedResult\\":{\\"url\\":\\"http://www.lyft.com\\",\\"status\\":\\"EXTRACT_OK\\",\\"title\\":\\"Lyft: A ride whenever you need one\\",\\"image\\":\\"https://images.ctfassets.net/q8mvene1wzq4/3amVLJGrSSKSYmDbFOCn9C/f7133270e145473d34a76d583294841d/04__2x.png\\",\\"extractedDT\\":1705309222422}}"}],"isSequential":false,"nItemsForNs":10}
+        """*/
+        /*let pfData = """
+        {"values":[{"values":[{"id":"images/1708491132374-hjJQ-vets-1708496809761.jpg","type":"putFile","path":"file://images/1708491132374-hjJQ-vets-1708496809761.jpg","content":""}],"isSequential":false,"nItemsForNs":10},{"id":"links/1707816556114-IeqP/1708491132374-hjJQ-UHxX-1708496809781.json","type":"putFile","path":"links/1707816556114-IeqP/1708491132374-hjJQ-UHxX-1708496809781.json","content":"{\\"id\\":\\"1708491132374-hjJQ-UHxX-1708496809781\\",\\"url\\":\\"www.lyft.com\\",\\"addedDT\\":1708491132374,\\"decor\\":{\\"image\\":{\\"bg\\":{\\"type\\":\\"image\\",\\"value\\":\\"/static/media/silver-framed-eyeglasses-beside-white-click-pen-and-white-notebook.43cbd30b.jpg\\"},\\"fg\\":null},\\"favicon\\":{\\"bg\\":{\\"type\\":\\"color\\",\\"value\\":\\"bg-teal-300\\"}}},\\"extractedResult\\":{\\"url\\":\\"http://www.lyft.com\\",\\"status\\":\\"EXTRACT_OK\\",\\"title\\":\\"Lyft: A ride whenever you need one\\",\\"image\\":\\"https://images.ctfassets.net/q8mvene1wzq4/3amVLJGrSSKSYmDbFOCn9C/f7133270e145473d34a76d583294841d/04__2x.png\\",\\"extractedDT\\":1705309222422},\\"custom\\":{\\"title\\":\\"Lyft --- bla bla bla\\",\\"image\\":\\"cdroot/images/1708491132374-hjJQ-vets-1708496809761.jpg\\"}}"}],"isSequential":true,"nItemsForNs":10}
+        """*/
+        /*let pfData = """
+        {"values":[{"values":[{"values":[],"isSequential":false,"nItemsForNs":10},{"values":[{"id":"links/1707816556114-IeqP/1708491132374-hjJQ-UHxX-1708496809781.json","type":"deleteFile","path":"links/1707816556114-IeqP/1708491132374-hjJQ-UHxX-1708496809781.json","doIgnoreDoesNotExistError":true}],"isSequential":false,"nItemsForNs":10}],"isSequential":true,"nItemsForNs":10}],"isSequential":false,"nItemsForNs":10}
+        """*/
+        let pfData = """
+        {"values":[{"values":[{"values":[{"id":"images/1708491132374-hjJQ-vets-1708496809761.jpg","type":"deleteFile","path":"images/1708491132374-hjJQ-vets-1708496809761.jpg","doIgnoreDoesNotExistError":true}],"isSequential":false,"nItemsForNs":10},{"values":[{"id":"links/1707816556114-IeqP/1708491132374-hjJQ-UHxX-1708496809781.json","type":"deleteFile","path":"links/1707816556114-IeqP/1708491132374-hjJQ-UHxX-1708496809781.json","doIgnoreDoesNotExistError":true}],"isSequential":false,"nItemsForNs":10}],"isSequential":true,"nItemsForNs":10}],"isSequential":false,"nItemsForNs":10}
+        """
+        let dir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
 
+        Blockstack.shared.performFiles(pfData: pfData, dir: dir) { result, error in
+            var message: String
+            if let error = error {
+                message = error.localizedDescription
+            } else if let result = result {
+                message = result
+            } else {
+                message = "Something went wrong!"
+            }
+            
+            DispatchQueue.main.async {
+                let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
+                self.present(alert, animated: true, completion: nil)
+            }
+        }
+    }
+    
     // MARK: - Private
     
     private func saveInvalidGaiaConfig() -> Bool {
