@@ -353,8 +353,13 @@ class GaiaHubSession {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpBody = fpfData
+        //request.timeoutInterval = default (60 seconds)
 
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 90
+        //config.timeoutIntervalForResource = default (7 days)
+        let session = URLSession(configuration: config)
+        let task = session.dataTask(with: request) { data, response, error in
             guard error == nil, let httpResponse = response as? HTTPURLResponse, let data = data else {
                 completion(nil, GaiaError.requestError)
                 return
