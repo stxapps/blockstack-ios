@@ -82,7 +82,7 @@ class Gaia {
                 "salt": salt,
             ]
             if let gaiaAssociationToken = gaiaAssociationToken {
-                payload["gaiaAssociationToken"] = gaiaAssociationToken
+                payload["associationToken"] = gaiaAssociationToken
             }
             guard let address = Keys.getAddressFromPublicKey(iss),
                   let signedPayload = JSONTokensJS().signToken(payload: payload, privateKey: challengeSignerHex) else {
